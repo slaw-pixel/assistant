@@ -139,6 +139,9 @@ export default function Home() {
     }
   };
 
+  const [dragging, setDragging] = useState<string | null>(null);
+  const [dragOver, setDragOver] = useState<string | null>(null);
+
   const switchPeriod = (p: Period) => { setPeriod(p); fetchBetas(p); };
 
   return (
@@ -184,16 +187,40 @@ export default function Home() {
           </div>
           <div className="flex-1 overflow-auto">
             {Object.entries(assignGroups).map(([etf, tickers]) => (
-              <div key={etf}>
-                <div className="px-2 py-0.5 text-[10px] text-slate-600 uppercase tracking-wider bg-[#080808] sticky top-0 z-10">
-                  {etf} <span className="text-slate-700">({tickers.length})</span>
+              <div key={etf}
+                onDragOver={(e) => { e.preventDefault(); setDragOver(etf); }}
+                onDragLeave={() => setDragOver(null)}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  if (dragging && dragging !== etf) setOverride(dragging, etf);
+                  setDragging(null);
+                  setDragOver(null);
+                }}
+              >
+                <div className={clsx(
+                  "px-2 py-0.5 text-[10px] uppercase tracking-wider sticky top-0 z-10 transition-colors",
+                  dragOver === etf
+                    ? "bg-blue-900/60 text-blue-300"
+                    : "bg-[#080808] text-slate-600"
+                )}>
+                  {etf} <span className="opacity-50">({tickers.length})</span>
                 </div>
                 {tickers.sort().map((ticker) => (
-                  <div key={ticker} className="flex items-center gap-1 px-2 py-px hover:bg-[#151515]">
+                  <div key={ticker}
+                    draggable
+                    onDragStart={() => setDragging(ticker)}
+                    onDragEnd={() => { setDragging(null); setDragOver(null); }}
+                    className={clsx(
+                      "flex items-center gap-1 px-2 py-px hover:bg-[#151515] cursor-grab active:cursor-grabbing select-none transition-opacity",
+                      dragging === ticker && "opacity-30"
+                    )}
+                  >
+                    <span className="text-slate-600 text-[10px] mr-0.5">⠿</span>
                     <span className="text-xs text-slate-300 flex-1 font-mono">{ticker}</span>
                     <select
                       value={overrides[ticker] ?? etf}
                       onChange={(e) => setOverride(ticker, e.target.value)}
+                      onClick={(e) => e.stopPropagation()}
                       className="text-[10px] bg-[#111] border border-[#222] rounded px-0.5 text-slate-500 focus:outline-none focus:border-blue-600 cursor-pointer max-w-[52px]"
                     >
                       {ETF_OPTIONS.map((e) => <option key={e} value={e}>{e}</option>)}
