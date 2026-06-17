@@ -39,11 +39,21 @@ def _pipe_connect(pipe_name):
         0, None,
     )
 
-def _pipe_request(handle, payload, buf=131072):
-    import win32file
+def _pipe_request(handle, payload, buf=1048576):
+    import win32file, pywintypes
     win32file.WriteFile(handle, payload)
-    _, data = win32file.ReadFile(handle, buf)
-    return bytes(data)
+    chunks = []
+    while True:
+        try:
+            _, chunk = win32file.ReadFile(handle, buf)
+            chunks.append(bytes(chunk))
+            break
+        except pywintypes.error as e:
+            if e.winerror == 234:  # ERROR_MORE_DATA — message continues
+                chunks.append(bytes(e.args[2]) if len(e.args) > 2 else b"")
+                continue
+            raise
+    return b"".join(chunks)
 
 def build_request(tickers, fields):
     items = [{"Ticker": t, "FieldName": f} for t in tickers for f in fields]
@@ -135,13 +145,11 @@ async def poll_loop():
             t0 = time.monotonic()
             rows = await asyncio.get_event_loop().run_in_executor(None, _pipe_query, tickers)
             _last_snapshot = rows
-            msg = json.dumps({
-                "type": "snapshot",
-                "data": rows,
-                "ts": time.strftime("%H:%M:%S"),
-            })
+            ts = time.strftime("%H:%M:%S")
+            msg = json.dumps({"type": "snapshot", "data": rows, "ts": ts})
             await broadcast(msg)
             elapsed = time.monotonic() - t0
+            print(f"[bridge] ok {ts} — {len(rows)} rows in {elapsed*1000:.0f}ms")
             await asyncio.sleep(max(0, interval - elapsed))
         except Exception as e:
             print(f"[bridge] pipe error: {e}")
