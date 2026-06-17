@@ -16,16 +16,26 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: `Invalid period: ${period}` }, { status: 400 });
   }
 
-  // Fetch all sectors in parallel; skip a sector if it fails
+  console.log(`[betas] fetching period="${period}" for ${Object.keys(UNIVERSE).length} sectors`);
+
   const results = await Promise.allSettled(
-    Object.entries(UNIVERSE).map(([etf, stocks]) =>
-      fetchSectorBetas(stocks, etf, period)
-    )
+    Object.entries(UNIVERSE).map(async ([etf, stocks]) => {
+      console.log(`[betas] → ${etf} (${stocks.length} stocks)`);
+      try {
+        const rows = await fetchSectorBetas(stocks, etf, period);
+        console.log(`[betas] ✓ ${etf}: ${rows.length} rows`);
+        return rows;
+      } catch (e) {
+        console.error(`[betas] ✗ ${etf}: ${e}`);
+        throw e;
+      }
+    })
   );
 
   const rows = results.flatMap((r) =>
     r.status === "fulfilled" ? r.value : []
   );
 
+  console.log(`[betas] done — ${rows.length} total rows`);
   return NextResponse.json({ rows, period, fetchedAt: new Date().toISOString() });
 }

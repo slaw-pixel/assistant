@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import Link from "next/link";
 import BetaTable, { type BetaRow } from "@/components/beta-table";
 import { RefreshCw } from "lucide-react";
 import clsx from "clsx";
@@ -63,22 +64,20 @@ export default function Home() {
           Assistant
         </span>
 
-        {/* Nav tabs — future phases */}
+        {/* Nav tabs */}
         <nav className="flex gap-1">
-          {["Betas", "Свелось?", "Live"].map((tab, i) => (
-            <button
-              key={tab}
-              disabled={i > 0}
-              className={clsx(
-                "px-3 py-1 rounded text-xs font-medium",
-                i === 0
-                  ? "bg-blue-600 text-white"
-                  : "text-slate-600 cursor-not-allowed"
-              )}
-            >
-              {tab}
-            </button>
-          ))}
+          <span className="px-3 py-1 rounded text-xs font-medium bg-blue-600 text-white">
+            Betas
+          </span>
+          <Link
+            href="/stacks"
+            className="px-3 py-1 rounded text-xs font-medium text-slate-400 hover:text-slate-200"
+          >
+            Все стаки
+          </Link>
+          <span className="px-3 py-1 rounded text-xs font-medium text-slate-600 cursor-not-allowed">
+            Свелось?
+          </span>
         </nav>
 
         <div className="flex-1" />

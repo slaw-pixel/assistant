@@ -1,0 +1,11 @@
+{
+  "comment": "Список тикеров для экрана ВСЕ СТАКИ. Редактируй и перезапускай terminal_bridge.py.",
+  "tickers": [
+    "SPY",
+    "QQQ",
+    "AAPL",
+    "MSFT",
+    "NVDA",
+    "TSLA"
+  ]
+}

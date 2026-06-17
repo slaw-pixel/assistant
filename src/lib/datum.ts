@@ -11,20 +11,29 @@ async function getToken(): Promise<string> {
   const now = Date.now() / 1000;
   if (_cached && now < _cached.expiresAt - 300) return _cached.token;
 
-  const res = await fetch(AUTH_URL, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      client_id: CLIENT_ID,
-      client_secret: process.env.DATUM_CLIENT_SECRET,
-      audience: "datum_api",
-      grant_type: "http://auth0.com/oauth/grant-type/password-realm",
-      username: process.env.DATUM_USERNAME,
-      password: process.env.DATUM_PASSWORD,
-      realm: "Username-Password-Authentication",
-    }),
-    cache: "no-store",
-  });
+  const authController = new AbortController();
+  const authTimer = setTimeout(() => authController.abort(), 15_000);
+
+  let res: Response;
+  try {
+    res = await fetch(AUTH_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        client_id: CLIENT_ID,
+        client_secret: process.env.DATUM_CLIENT_SECRET,
+        audience: "datum_api",
+        grant_type: "http://auth0.com/oauth/grant-type/password-realm",
+        username: process.env.DATUM_USERNAME,
+        password: process.env.DATUM_PASSWORD,
+        realm: "Username-Password-Authentication",
+      }),
+      cache: "no-store",
+      signal: authController.signal,
+    });
+  } finally {
+    clearTimeout(authTimer);
+  }
 
   if (!res.ok) throw new Error(`Auth0 ${res.status}: ${await res.text()}`);
 
@@ -58,15 +67,23 @@ export async function fetchSectorBetas(
     format: "json_records",
   });
 
-  const res = await fetch(`${DATUM_API}/calculations/corr_beta/v2?${params}`, {
-    headers: { Authorization: `Bearer ${token}` },
-    cache: "no-store",
-  });
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 20_000);
 
-  if (!res.ok) {
-    throw new Error(`Datum ${res.status} [${etf}]: ${await res.text()}`);
+  try {
+    const res = await fetch(`${DATUM_API}/calculations/corr_beta/v2?${params}`, {
+      headers: { Authorization: `Bearer ${token}` },
+      cache: "no-store",
+      signal: controller.signal,
+    });
+
+    if (!res.ok) {
+      throw new Error(`Datum ${res.status} [${etf}]: ${await res.text()}`);
+    }
+
+    const data = await res.json();
+    return Array.isArray(data) ? data : [];
+  } finally {
+    clearTimeout(timer);
   }
-
-  const data = await res.json();
-  return Array.isArray(data) ? data : [];
 }
