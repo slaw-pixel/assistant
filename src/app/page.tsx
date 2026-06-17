@@ -66,18 +66,15 @@ export default function Home() {
 
         {/* Nav tabs */}
         <nav className="flex gap-1">
-          <span className="px-3 py-1 rounded text-xs font-medium bg-blue-600 text-white">
-            Betas
-          </span>
-          <Link
-            href="/stacks"
-            className="px-3 py-1 rounded text-xs font-medium text-slate-400 hover:text-slate-200"
-          >
+          <Link href="/stacks" className="px-3 py-1 rounded text-xs font-medium text-slate-400 hover:text-slate-200">
             Все стаки
           </Link>
-          <Link href="/convergence" className="px-3 py-1 rounded text-xs font-medium text-slate-400 hover:text-slate-200">
-            Свелось?
-          </Link>
+          <span className="px-3 py-1 rounded text-xs font-medium bg-blue-600 text-white">
+            Беты
+          </span>
+          <span className="px-3 py-1 rounded text-xs font-medium text-slate-700 cursor-not-allowed">
+            Результат
+          </span>
         </nav>
 
         <div className="flex-1" />

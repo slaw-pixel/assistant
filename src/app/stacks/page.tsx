@@ -5,9 +5,9 @@ import StacksTable from "@/components/stacks-table";
 import clsx from "clsx";
 
 const TABS = [
-  { label: "Betas", href: "/" },
-  { label: "Все стаки", href: "/stacks" },
-  { label: "Свелось?", href: "/convergence" },
+  { label: "Все стаки", href: "/stacks", active: true },
+  { label: "Беты", href: "/" },
+  { label: "Результат", href: "#", disabled: true },
 ];
 
 export default function StacksPage() {
@@ -18,20 +18,15 @@ export default function StacksPage() {
           Assistant
         </span>
         <nav className="flex gap-1">
-          {TABS.map(({ label, href }) => (
-            <Link
-              key={label}
-              href={href}
-              className={clsx(
-                "px-3 py-1 rounded text-xs font-medium",
-                href === "/stacks"
-                  ? "bg-blue-600 text-white"
-                  : "text-slate-400 hover:text-slate-200"
-              )}
-            >
-              {label}
-            </Link>
-          ))}
+          {TABS.map(({ label, href, active, disabled }) =>
+            disabled ? (
+              <span key={label} className="px-3 py-1 rounded text-xs font-medium text-slate-700 cursor-not-allowed">{label}</span>
+            ) : (
+              <Link key={label} href={href} className={clsx("px-3 py-1 rounded text-xs font-medium", active ? "bg-blue-600 text-white" : "text-slate-400 hover:text-slate-200")}>
+                {label}
+              </Link>
+            )
+          )}
         </nav>
         <div className="flex-1" />
         <span className="text-xs text-slate-600">

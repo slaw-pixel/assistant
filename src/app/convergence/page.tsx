@@ -5,9 +5,9 @@ import clsx from "clsx";
 import ConvergenceTable from "@/components/convergence-table";
 
 const TABS = [
-  { label: "Betas", href: "/" },
   { label: "Все стаки", href: "/stacks" },
-  { label: "Свелось?", href: "/convergence" },
+  { label: "Беты", href: "/" },
+  { label: "Результат", href: "/convergence", active: true },
 ];
 
 export default function ConvergencePage() {
@@ -18,15 +18,13 @@ export default function ConvergencePage() {
           Assistant
         </span>
         <nav className="flex gap-1">
-          {TABS.map(({ label, href }) => (
+          {TABS.map(({ label, href, active }) => (
             <Link
               key={label}
               href={href}
               className={clsx(
                 "px-3 py-1 rounded text-xs font-medium",
-                href === "/convergence"
-                  ? "bg-blue-600 text-white"
-                  : "text-slate-400 hover:text-slate-200"
+                active ? "bg-blue-600 text-white" : "text-slate-400 hover:text-slate-200"
               )}
             >
               {label}
