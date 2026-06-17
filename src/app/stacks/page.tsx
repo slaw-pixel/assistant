@@ -12,19 +12,13 @@ interface LiveRow {
   "AskLstClsΔ%": number | null;
   isTrash: number | string | null;
   Report: number | string | null;
+  PosSize: number | null;
 }
 
 type Status = "connecting" | "connected" | "disconnected";
 
 const WS_URL = process.env.NEXT_PUBLIC_BRIDGE_URL ?? "ws://localhost:8766";
 
-const TABS = [
-  { label: "Все стаки", href: "/stacks", active: true },
-  { label: "Беты", href: "/" },
-  { label: "Результат", href: "#", disabled: true },
-];
-
-// ticker → ETF lookup from universe
 const TICKER_ETF: Record<string, string> = {};
 for (const [etf, tickers] of Object.entries(UNIVERSE))
   for (const t of tickers) TICKER_ETF[t] = etf;
@@ -33,6 +27,15 @@ function pct(v: number | null) {
   if (v == null) return "—";
   return (v > 0 ? "+" : "") + v.toFixed(2) + "%";
 }
+
+function posCell(v: number | null) {
+  if (v == null || v === 0) return <span className="text-slate-700">—</span>;
+  const abs = Math.abs(v).toLocaleString("en-US");
+  return v > 0
+    ? <span className="text-green-400 font-mono font-bold">{abs}</span>
+    : <span className="text-red-400 font-mono font-bold">-{abs}</span>;
+}
+
 function flag(v: number | string | null) {
   if (v == null || v === "" || v === 0 || v === "0" || v === "NO" || v === "False") return null;
   return <span className="text-yellow-500">●</span>;
@@ -60,11 +63,7 @@ export default function StacksPage() {
 
   const save = useCallback(async (next: string[]) => {
     setSaving(true);
-    await fetch("/api/stacks", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ tickers: next }),
-    });
+    await fetch("/api/stacks", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ tickers: next }) });
     setSaving(false);
     setTickers(next);
   }, []);
@@ -100,29 +99,18 @@ export default function StacksPage() {
     return () => { clearTimeout(timer); wsRef.current?.close(); };
   }, []);
 
-  const dot = {
-    connected: "bg-green-500",
-    connecting: "bg-yellow-500 animate-pulse",
-    disconnected: "bg-red-500",
-  }[status];
-
+  const dot = { connected: "bg-green-500", connecting: "bg-yellow-500 animate-pulse", disconnected: "bg-red-500" }[status];
   const etfFor = (ticker: string) => assignments[ticker] ?? TICKER_ETF[ticker] ?? "";
 
   return (
-    <div className="flex flex-col h-screen bg-[#0d0d0d] text-slate-200">
+    <div className="flex flex-col h-screen bg-[#1e1e1e] text-slate-200">
       {/* Nav */}
-      <header className="flex items-center gap-4 px-4 py-2 border-b border-[#2a2a2a] bg-[#111] shrink-0">
+      <header className="flex items-center gap-4 px-4 py-2 border-b border-[#333] bg-[#242424] shrink-0">
         <span className="text-slate-400 font-bold tracking-widest text-sm uppercase">Assistant</span>
         <nav className="flex gap-1">
-          {TABS.map(({ label, href, active, disabled }) =>
-            disabled ? (
-              <span key={label} className="px-3 py-1 rounded text-xs font-medium text-slate-700 cursor-not-allowed">{label}</span>
-            ) : (
-              <Link key={label} href={href} className={clsx("px-3 py-1 rounded text-xs font-medium", active ? "bg-blue-600 text-white" : "text-slate-400 hover:text-slate-200")}>
-                {label}
-              </Link>
-            )
-          )}
+          <span className="px-3 py-1 rounded text-xs font-medium bg-blue-600 text-white">Все стаки</span>
+          <Link href="/" className="px-3 py-1 rounded text-xs font-medium text-slate-400 hover:text-slate-200">Беты</Link>
+          <Link href="/convergence" className="px-3 py-1 rounded text-xs font-medium text-slate-400 hover:text-slate-200">Calc</Link>
         </nav>
         <div className="flex-1" />
         <div className="flex items-center gap-1">
@@ -130,60 +118,63 @@ export default function StacksPage() {
             onChange={(e) => setInput(e.target.value.toUpperCase())}
             onKeyDown={(e) => e.key === "Enter" && addTicker()}
             placeholder="TICKER"
-            className="w-20 bg-[#1a1a1a] border border-[#333] rounded px-2 py-0.5 text-xs text-slate-200 placeholder:text-slate-600 uppercase focus:outline-none focus:border-blue-600" />
+            className="w-20 bg-[#2a2a2a] border border-[#404040] rounded px-2 py-0.5 text-xs text-slate-200 placeholder:text-slate-600 uppercase focus:outline-none focus:border-blue-500" />
           <button onClick={addTicker}
             className="flex items-center gap-1 px-2 py-0.5 rounded bg-blue-700 hover:bg-blue-600 text-xs font-medium transition-colors">
             <Plus size={11} /> Добавить
           </button>
         </div>
         <a href="/api/stacks/export" download="stacks.xlsx"
-          className="flex items-center gap-1 px-2 py-0.5 rounded bg-[#1a1a1a] border border-[#333] hover:border-slate-500 text-xs text-slate-400 hover:text-slate-200 transition-colors">
+          className="flex items-center gap-1 px-2 py-0.5 rounded bg-[#2a2a2a] border border-[#404040] hover:border-slate-400 text-xs text-slate-400 hover:text-slate-200 transition-colors">
           <Download size={11} /> Excel
         </a>
-        <span className="text-xs text-slate-600">{saving ? "сохраняю..." : `${tickers.length}`}</span>
+        <span className="text-xs text-slate-500">{saving ? "сохраняю..." : `${tickers.length}`}</span>
       </header>
 
       {/* Status */}
-      <div className="flex items-center gap-2 px-4 py-0.5 border-b border-[#1a1a1a] text-[11px] text-slate-600 shrink-0">
+      <div className="flex items-center gap-2 px-4 py-0.5 border-b border-[#2a2a2a] text-[11px] text-slate-500 shrink-0 bg-[#1e1e1e]">
         <span className={clsx("w-1.5 h-1.5 rounded-full shrink-0", dot)} />
         <span>
           {status === "connected" ? "Терминал подключён"
             : status === "connecting" ? "Подключение..."
             : "Терминал недоступен — python scripts/terminal_bridge.py"}
         </span>
-        {ts && <span className="ml-auto tabular-nums">{ts}</span>}
+        {ts && <span className="ml-auto tabular-nums text-slate-600">{ts}</span>}
       </div>
 
       {/* Table */}
       <div className="flex-1 overflow-auto">
         <table className="w-full border-collapse" style={{ fontSize: "11px" }}>
-          <thead className="sticky top-0 bg-[#0d0d0d] z-10">
-            <tr className="text-slate-600 uppercase tracking-wider text-[10px]">
-              <th className="w-6 px-1 py-1"></th>
-              <th className="text-left px-2 py-1">Тикер</th>
-              <th className="text-right px-2 py-1">Bid%</th>
-              <th className="text-right px-2 py-1">Ask%</th>
-              <th className="text-center px-1 py-1">T</th>
-              <th className="text-center px-1 py-1">R</th>
-              <th className="text-left px-2 py-1 text-slate-700">Сектор</th>
+          <thead className="sticky top-0 bg-[#1e1e1e] z-10">
+            <tr className="text-slate-500 uppercase tracking-wider text-[10px] border-b border-[#2e2e2e]">
+              <th className="w-6 px-1 py-1.5"></th>
+              <th className="text-left px-2 py-1.5">Тикер</th>
+              <th className="text-right px-2 py-1.5">Bid%</th>
+              <th className="text-right px-2 py-1.5">Ask%</th>
+              <th className="text-center px-1 py-1.5">T</th>
+              <th className="text-center px-1 py-1.5">R</th>
+              <th className="text-right px-2 py-1.5 text-slate-500">PosSize</th>
+              <th className="text-left px-2 py-1.5 text-slate-600">Сектор</th>
             </tr>
           </thead>
           <tbody>
             {tickers.map((ticker) => {
               const r = liveMap.get(ticker);
+              const hasPos = r?.PosSize != null && r.PosSize !== 0;
               return (
-                <tr key={ticker} className="border-t border-[#131313] hover:bg-[#141414] group">
+                <tr key={ticker} className={clsx("border-t border-[#272727] group", hasPos ? "bg-[#1e2820]" : "hover:bg-[#272727]")}>
                   <td className="px-1 py-px text-center">
                     <button onClick={() => removeTicker(ticker)}
-                      className="opacity-0 group-hover:opacity-100 text-slate-700 hover:text-red-500 transition-all">
+                      className="opacity-0 group-hover:opacity-100 text-slate-600 hover:text-red-500 transition-all">
                       <X size={10} />
                     </button>
                   </td>
-                  <td className="px-2 py-px font-mono font-bold text-slate-200">{ticker}</td>
+                  <td className={clsx("px-2 py-px font-mono font-bold", hasPos ? "text-slate-100" : "text-slate-300")}>{ticker}</td>
                   <td className="px-2 py-px text-right tabular-nums text-slate-400">{pct(r?.["BidLstClsΔ%"] ?? null)}</td>
                   <td className="px-2 py-px text-right tabular-nums text-slate-400">{pct(r?.["AskLstClsΔ%"] ?? null)}</td>
                   <td className="px-1 py-px text-center">{flag(r?.isTrash ?? null)}</td>
                   <td className="px-1 py-px text-center">{flag(r?.Report ?? null)}</td>
+                  <td className="px-2 py-px text-right">{posCell(r?.PosSize ?? null)}</td>
                   <td className="px-2 py-px text-slate-600 font-mono">{etfFor(ticker)}</td>
                 </tr>
               );

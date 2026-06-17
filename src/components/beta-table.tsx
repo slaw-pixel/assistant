@@ -92,7 +92,7 @@ export default function BetaTable({ rows, search, focusTicker, onDelete }: Props
   }
 
   const headers = (
-    <thead className="sticky top-0 bg-[#141414] z-10">
+    <thead className="sticky top-0 bg-[#1e1e1e] z-10">
       <tr className="text-xs uppercase tracking-wider">
         <Th col="ticker" label="Тикер" />
         <Th col="etf" label="Сектор" />

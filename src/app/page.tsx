@@ -197,14 +197,14 @@ export default function Home() {
   const switchPeriod = (p: Period) => { setPeriod(p); fetchBetas(p); };
 
   return (
-    <div className="flex flex-col h-screen bg-[#141414] text-slate-200">
+    <div className="flex flex-col h-screen bg-[#1e1e1e] text-slate-200">
       {/* Header */}
-      <header className="flex items-center gap-3 px-4 py-2 border-b border-[#2e2e2e] bg-[#1c1c1c] shrink-0">
+      <header className="flex items-center gap-3 px-4 py-2 border-b border-[#333] bg-[#242424] shrink-0">
         <span className="text-slate-400 font-bold tracking-widest text-sm uppercase">Assistant</span>
         <nav className="flex gap-1">
           <Link href="/stacks" className="px-3 py-1 rounded text-xs font-medium text-slate-400 hover:text-slate-200">Все стаки</Link>
           <span className="px-3 py-1 rounded text-xs font-medium bg-blue-600 text-white">Беты</span>
-          <Link href="/convergence" className="px-3 py-1 rounded text-xs font-medium text-slate-400 hover:text-slate-200">Результат</Link>
+          <Link href="/convergence" className="px-3 py-1 rounded text-xs font-medium text-slate-400 hover:text-slate-200">Calc</Link>
         </nav>
         <div className="flex-1" />
         <div className="flex gap-1">
@@ -231,11 +231,11 @@ export default function Home() {
       <div className="flex flex-1 overflow-hidden">
 
         {/* LEFT — Assignments */}
-        <aside className="w-52 flex flex-col border-r border-[#252525] shrink-0 overflow-hidden bg-[#161616]">
-          <div className="px-2 py-1.5 border-b border-[#252525] shrink-0">
+        <aside className="w-52 flex flex-col border-r border-[#333] shrink-0 overflow-hidden bg-[#1c1c1c]">
+          <div className="px-2 py-1.5 border-b border-[#333] shrink-0">
             <input value={assignSearch} onChange={(e) => setAssignSearch(e.target.value.toUpperCase())}
               placeholder="Фильтр тикера..."
-              className="w-full bg-[#1e1e1e] border border-[#303030] rounded px-2 py-0.5 text-xs text-slate-300 placeholder:text-slate-600 focus:outline-none focus:border-blue-500" />
+              className="w-full bg-[#252525] border border-[#404040] rounded px-2 py-0.5 text-xs text-slate-300 placeholder:text-slate-600 focus:outline-none focus:border-blue-500" />
           </div>
           <div className="flex-1 overflow-auto">
             {Object.entries(assignGroups).map(([etf, tickers]) => (
@@ -250,7 +250,7 @@ export default function Home() {
               >
                 <div className={clsx(
                   "px-2 py-0.5 text-[10px] uppercase tracking-wider sticky top-0 z-10 transition-colors",
-                  dragOver === etf ? "bg-blue-900/60 text-blue-300" : "bg-[#111] text-slate-600"
+                  dragOver === etf ? "bg-blue-900/60 text-blue-300" : "bg-[#181818] text-slate-500"
                 )}>
                   {etf} <span className="opacity-50">({tickers.length})</span>
                 </div>
@@ -311,9 +311,9 @@ export default function Home() {
 
           {/* Attention list */}
           {attentionRows.length > 0 && (
-            <div className="shrink-0 overflow-auto bg-[#191919]" style={{ height: attentionHeight }}>
+            <div className="shrink-0 overflow-auto bg-[#1c1c1c]" style={{ height: attentionHeight }}>
               {/* Header */}
-              <div className="flex items-center gap-2 px-3 py-1.5 bg-[#222] border-b border-[#2e2e2e] sticky top-0 z-10">
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-[#252525] border-b border-[#333] sticky top-0 z-10">
                 <AlertTriangle size={11} className="text-yellow-500 shrink-0" />
                 <span className="text-xs text-yellow-500 font-medium">
                   Внимание — corr &lt; 0.7 ({attentionRows.length} тикеров)
@@ -390,7 +390,7 @@ export default function Home() {
       </div>
 
       {/* Footer */}
-      <footer className="px-4 py-1 border-t border-[#252525] text-xs text-slate-600 flex gap-4 shrink-0 bg-[#161616]">
+      <footer className="px-4 py-1 border-t border-[#333] text-xs text-slate-500 flex gap-4 shrink-0 bg-[#1c1c1c]">
         <span>{rows.length} тикеров</span>
         {fetchedAt && <span>обновлено {fetchedAt.toLocaleTimeString("ru-RU")}</span>}
         {attentionRows.length > 0 && <span className="text-yellow-700">⚠ {attentionRows.length} с низкой корреляцией</span>}
