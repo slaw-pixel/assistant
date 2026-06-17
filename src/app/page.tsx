@@ -30,7 +30,8 @@ function etHour(): number {
   return et.getUTCHours() + et.getUTCMinutes() / 60;
 }
 
-type Suggestion = { etf: string; corr: number } | "loading";
+type SugItem = { etf: string; corr: number; beta: number };
+type Suggestion = SugItem[] | "loading" | "dismissed";
 
 export default function Home() {
   const [rows, setRows] = useState<BetaRow[]>([]);
@@ -133,6 +134,14 @@ export default function Home() {
     });
   };
 
+  const dismissSuggest = (ticker: string) => {
+    setSuggests((p) => {
+      const next = { ...p, [ticker]: "dismissed" as const };
+      try { localStorage.setItem("betasSuggests", JSON.stringify(next)); } catch {}
+      return next;
+    });
+  };
+
   // Attention: low corr rows
   const attentionRows = useMemo(
     () =>
@@ -149,8 +158,10 @@ export default function Home() {
         `/api/betas/suggest?ticker=${ticker}&period=${encodeURIComponent(period)}`
       );
       const data = await res.json();
-      const best = data.suggestions?.[0];
-      const result: Suggestion = best ? { etf: best.etf, corr: best.corr } : "loading";
+      const top: SugItem[] = (data.suggestions ?? []).slice(0, 3).map(
+        (s: SugItem) => ({ etf: s.etf, corr: s.corr, beta: s.beta })
+      );
+      const result: Suggestion = top;
       setSuggests((p) => {
         const next = { ...p, [ticker]: result };
         try { localStorage.setItem("betasSuggests", JSON.stringify(next)); } catch {}
@@ -180,6 +191,7 @@ export default function Home() {
 
   const [dragging, setDragging] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState<string | null>(null);
+  const [attentionExpanded, setAttentionExpanded] = useState(false);
 
   const switchPeriod = (p: Period) => { setPeriod(p); fetchBetas(p); };
 
@@ -277,8 +289,8 @@ export default function Home() {
         {/* RIGHT — Results + Attention */}
         <div className="flex-1 flex flex-col overflow-hidden">
 
-          {/* Betas table */}
-          <div className="flex-1 overflow-auto">
+          {/* Betas table — hidden when attention is expanded */}
+          <div className={clsx("overflow-auto", attentionExpanded ? "hidden" : "flex-1")}>
             {error && (
               <div className="m-3 p-2 rounded bg-red-900/30 border border-red-800 text-red-300 text-xs">{error}</div>
             )}
@@ -292,42 +304,68 @@ export default function Home() {
 
           {/* Attention list */}
           {attentionRows.length > 0 && (
-            <div className="border-t border-[#2a2a2a] shrink-0 overflow-auto" style={{ maxHeight: "32%" }}>
-              <div className="flex items-center gap-2 px-3 py-1 bg-[#0a0a0a] border-b border-[#1a1a1a] sticky top-0">
+            <div className={clsx(
+              "border-t border-[#2a2a2a] overflow-auto",
+              attentionExpanded ? "flex-1" : "shrink-0"
+            )} style={attentionExpanded ? undefined : { maxHeight: "32%" }}>
+              {/* Sticky header */}
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-[#1a1a1a] border-b border-[#2a2a2a] sticky top-0 z-10">
                 <AlertTriangle size={11} className="text-yellow-500 shrink-0" />
                 <span className="text-xs text-yellow-500 font-medium">
                   Внимание — corr &lt; 0.7 ({attentionRows.length} тикеров)
                 </span>
+                <div className="flex-1" />
+                <button
+                  onClick={() => setAttentionExpanded((v) => !v)}
+                  className="text-[11px] text-slate-500 hover:text-slate-300 px-2 py-0.5 rounded hover:bg-[#2a2a2a] transition-colors"
+                >
+                  {attentionExpanded ? "↓ свернуть" : "↑ развернуть"}
+                </button>
               </div>
               <table className="w-full text-xs border-collapse">
                 <thead>
-                  <tr className="text-slate-600 uppercase tracking-wider text-[10px]">
+                  <tr className="text-slate-500 uppercase tracking-wider text-[10px] bg-[#161616]">
                     <th className="text-left px-3 py-1">Тикер</th>
                     <th className="text-left px-2 py-1">ETF</th>
                     <th className="text-right px-2 py-1">Corr</th>
                     <th className="text-right px-2 py-1">Beta</th>
-                    <th className="text-left px-3 py-1">Лучший ETF</th>
+                    <th className="text-left px-3 py-1">Альтернативы</th>
                   </tr>
                 </thead>
                 <tbody>
                   {attentionRows.map((r) => {
                     const sug = suggests[r.x_ticker];
+                    const items = Array.isArray(sug) ? sug : null;
                     return (
-                      <tr key={r.x_ticker} className="border-t border-[#111] hover:bg-[#111]">
-                        <td className="px-3 py-1 font-bold text-slate-200">{r.x_ticker}</td>
-                        <td className="px-2 py-1 text-slate-500">{r.y_ticker}</td>
-                        <td className="px-2 py-1 text-right tabular-nums text-red-400 font-semibold">{r.corr.toFixed(2)}</td>
-                        <td className="px-2 py-1 text-right tabular-nums text-slate-400">{r.beta.toFixed(2)}</td>
-                        <td className="px-3 py-1">
-                          {!sug && <span className="text-slate-700 text-[10px]">ожидание...</span>}
+                      <tr key={r.x_ticker} className="border-t border-[#222] hover:bg-[#1e1e1e]">
+                        <td className="px-3 py-1.5 font-bold text-slate-200">{r.x_ticker}</td>
+                        <td className="px-2 py-1.5 text-slate-500">{r.y_ticker}</td>
+                        <td className="px-2 py-1.5 text-right tabular-nums text-red-400 font-semibold">{r.corr.toFixed(2)}</td>
+                        <td className="px-2 py-1.5 text-right tabular-nums text-slate-400">{r.beta.toFixed(2)}</td>
+                        <td className="px-3 py-1.5">
+                          {!sug && <span className="text-slate-600 text-[10px]">ожидание...</span>}
                           {sug === "loading" && <span className="text-slate-500 text-[10px]">поиск...</span>}
-                          {sug && sug !== "loading" && (
-                            <span className="flex items-center gap-1.5">
-                              <span className="text-green-400 font-bold">{sug.etf}</span>
-                              <span className="text-slate-600">{sug.corr.toFixed(2)}</span>
-                              <button onClick={() => setOverride(r.x_ticker, (sug as { etf: string }).etf)}
-                                className="text-blue-400 hover:text-blue-300 underline">
-                                применить
+                          {sug === "dismissed" && <span className="text-slate-700 text-[10px]">оставлено</span>}
+                          {items && items.length === 0 && <span className="text-slate-700 text-[10px]">нет альтернатив</span>}
+                          {items && items.length > 0 && (
+                            <span className="flex items-center gap-2 flex-wrap">
+                              {items.map((s) => (
+                                <button
+                                  key={s.etf}
+                                  onClick={() => { setOverride(r.x_ticker, s.etf); dismissSuggest(r.x_ticker); }}
+                                  className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-[#252525] hover:bg-[#2e2e2e] border border-[#333] hover:border-green-700 transition-colors group"
+                                  title={`применить ${s.etf}`}
+                                >
+                                  <span className="text-green-400 group-hover:text-green-300 font-bold text-[11px]">{s.etf}</span>
+                                  <span className="text-slate-500 text-[10px]">{s.corr.toFixed(2)}</span>
+                                </button>
+                              ))}
+                              <button
+                                onClick={() => dismissSuggest(r.x_ticker)}
+                                className="text-slate-600 hover:text-slate-300 text-[13px] leading-none px-1 py-0.5 rounded hover:bg-[#2a2a2a] transition-colors"
+                                title="оставить текущий ETF"
+                              >
+                                ×
                               </button>
                             </span>
                           )}
