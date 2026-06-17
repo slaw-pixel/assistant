@@ -75,9 +75,9 @@ export default function Home() {
           >
             Все стаки
           </Link>
-          <span className="px-3 py-1 rounded text-xs font-medium text-slate-600 cursor-not-allowed">
+          <Link href="/convergence" className="px-3 py-1 rounded text-xs font-medium text-slate-400 hover:text-slate-200">
             Свелось?
-          </span>
+          </Link>
         </nav>
 
         <div className="flex-1" />
