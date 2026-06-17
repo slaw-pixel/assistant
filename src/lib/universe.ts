@@ -88,3 +88,22 @@ export const UNIVERSE: Record<string, string[]> = {
 };
 
 export const BENCHMARKS = Object.keys(UNIVERSE);
+
+export const SECTOR_LABEL: Record<string, string> = {
+  QQQ:  "Nasdaq",
+  IWM:  "Small Cap",
+  XLE:  "Energy",
+  DIA:  "Dow",
+  BITO: "Crypto",
+  SMH:  "Chips",
+  SOXL: "Chips 3x",
+  SPY:  "S&P 500",
+  XLF:  "Finance",
+  XLI:  "Industrials",
+  XLP:  "Staples",
+  XLU:  "Utilities",
+  IGV:  "Software",
+  GDX:  "Gold",
+  ARKK: "Innovation",
+  KWEB: "China",
+};

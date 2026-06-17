@@ -3,7 +3,7 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import Link from "next/link";
 import BetaTable, { type BetaRow } from "@/components/beta-table";
-import { UNIVERSE } from "@/lib/universe";
+import { UNIVERSE, SECTOR_LABEL } from "@/lib/universe";
 import { RefreshCw, AlertTriangle } from "lucide-react";
 import clsx from "clsx";
 
@@ -252,11 +252,11 @@ export default function Home() {
                     className={clsx(
                       "flex items-center gap-1 px-2 py-px cursor-grab active:cursor-grabbing select-none transition-all",
                       dragging === ticker ? "opacity-30" : "hover:bg-[#202020]",
-                      focusTicker === ticker && "bg-blue-950/60 ring-1 ring-inset ring-blue-700/50"
+                      focusTicker === ticker ? "!bg-blue-800/40 border-l-2 border-blue-500" : ""
                     )}
                   >
                     <span className="text-slate-700 text-[10px] mr-0.5">⠿</span>
-                    <span className={clsx("text-xs flex-1 font-mono", focusTicker === ticker ? "text-blue-300" : "text-slate-300")}>{ticker}</span>
+                    <span className={clsx("text-xs flex-1 font-mono font-bold", focusTicker === ticker ? "text-blue-300" : "text-slate-300")}>{ticker}</span>
                     <select
                       value={overrides[ticker] ?? etf}
                       onChange={(e) => setOverride(ticker, e.target.value)}
@@ -329,10 +329,11 @@ export default function Home() {
                         <td className="px-3 py-1.5">
                           <button
                             onClick={() => setFocusTicker((f) => f === r.x_ticker ? null : r.x_ticker)}
-                            className={clsx("font-bold tabular-nums hover:text-blue-300 transition-colors", focusTicker === r.x_ticker ? "text-blue-400" : "text-slate-200")}
+                            className={clsx("font-bold hover:text-blue-300 transition-colors", focusTicker === r.x_ticker ? "text-blue-400" : "text-slate-200")}
                           >
                             {r.x_ticker}
                           </button>
+                          <span className="ml-2 text-[10px] text-slate-600">{SECTOR_LABEL[r.y_ticker] ?? r.y_ticker}</span>
                         </td>
                         <td className="px-2 py-1.5 text-slate-500 font-mono">{r.y_ticker}</td>
                         <td className="px-2 py-1.5 text-right tabular-nums text-red-400 font-semibold">{r.corr.toFixed(2)}</td>

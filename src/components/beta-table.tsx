@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { BENCHMARKS } from "@/lib/universe";
+import { BENCHMARKS, SECTOR_LABEL as SECTOR } from "@/lib/universe";
 
 export interface BetaRow {
   x_ticker: string;
@@ -9,25 +9,6 @@ export interface BetaRow {
   corr: number;
   beta: number;
 }
-
-const SECTOR: Record<string, string> = {
-  QQQ:  "Nasdaq",
-  IWM:  "Small Cap",
-  XLE:  "Energy",
-  DIA:  "Dow",
-  BITO: "Crypto",
-  SMH:  "Chips",
-  SOXL: "Chips 3x",
-  SPY:  "S&P 500",
-  XLF:  "Finance",
-  XLI:  "Industrials",
-  XLP:  "Staples",
-  XLU:  "Utilities",
-  IGV:  "Software",
-  GDX:  "Gold",
-  ARKK: "Innovation",
-  KWEB: "China",
-};
 
 function betaColor(b: number) {
   if (b > 1.5) return "text-green-400 font-semibold";
