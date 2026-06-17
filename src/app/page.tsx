@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect, useMemo } from "react";
+import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import Link from "next/link";
 import BetaTable, { type BetaRow } from "@/components/beta-table";
 import { UNIVERSE } from "@/lib/universe";
@@ -51,6 +51,32 @@ export default function Home() {
       .catch(() => {});
   }, []);
 
+  // On mount: restore betas + suggestions from cache
+  useEffect(() => {
+    try {
+      const c = localStorage.getItem("betasCache");
+      if (c) {
+        const { rows: r, period: p, fetchedAt: fa } = JSON.parse(c);
+        setRows(r ?? []);
+        setPeriod(p ?? "3 months");
+        setFetchedAt(new Date(fa));
+      }
+    } catch {}
+    try {
+      const s = localStorage.getItem("betasSuggests");
+      if (s) setSuggests(JSON.parse(s));
+    } catch {}
+
+    // Auto-refresh if cache is stale
+    const stored = localStorage.getItem("betasFetchedAt");
+    if (stored) {
+      const last = new Date(stored);
+      const lastDay = new Date(last.getTime() - 4 * 3600_000).getUTCDate();
+      const todayDay = new Date(Date.now() - 4 * 3600_000).getUTCDate();
+      if (etHour() >= 17.5 && lastDay !== todayDay) fetchBetas();
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   const fetchBetas = useCallback(
     async (p: Period = period) => {
       setLoading(true);
@@ -59,10 +85,15 @@ export default function Home() {
         const res = await fetch(`/api/betas?period=${encodeURIComponent(p)}`);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
-        setRows(data.rows ?? []);
+        const newRows = data.rows ?? [];
+        setRows(newRows);
         const now = new Date();
         setFetchedAt(now);
+        // Clear old suggestions when betas refresh
+        setSuggests({});
+        localStorage.removeItem("betasSuggests");
         localStorage.setItem("betasFetchedAt", now.toISOString());
+        localStorage.setItem("betasCache", JSON.stringify({ rows: newRows, period: p, fetchedAt: now.toISOString() }));
       } catch (e) {
         setError(e instanceof Error ? e.message : String(e));
       } finally {
@@ -71,17 +102,6 @@ export default function Home() {
     },
     [period]
   );
-
-  // Auto-refresh at 17:30 ET if cache is from yesterday
-  useEffect(() => {
-    const stored = localStorage.getItem("betasFetchedAt");
-    if (!stored) return;
-    const last = new Date(stored);
-    setFetchedAt(last);
-    const lastDay = new Date(last.getTime() - 4 * 3600_000).getUTCDate();
-    const todayDay = new Date(Date.now() - 4 * 3600_000).getUTCDate();
-    if (etHour() >= 17.5 && lastDay !== todayDay) fetchBetas();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Effective assignments: overrides > universe defaults
   const effective = useMemo(
@@ -122,7 +142,7 @@ export default function Home() {
     [rows]
   );
 
-  const suggestETF = async (ticker: string) => {
+  const suggestETF = useCallback(async (ticker: string) => {
     setSuggests((p) => ({ ...p, [ticker]: "loading" }));
     try {
       const res = await fetch(
@@ -130,14 +150,33 @@ export default function Home() {
       );
       const data = await res.json();
       const best = data.suggestions?.[0];
-      setSuggests((p) => ({
-        ...p,
-        [ticker]: best ? { etf: best.etf, corr: best.corr } : "loading",
-      }));
+      const result: Suggestion = best ? { etf: best.etf, corr: best.corr } : "loading";
+      setSuggests((p) => {
+        const next = { ...p, [ticker]: result };
+        try { localStorage.setItem("betasSuggests", JSON.stringify(next)); } catch {}
+        return next;
+      });
     } catch {
       setSuggests((p) => { const n = { ...p }; delete n[ticker]; return n; });
     }
-  };
+  }, [period]);
+
+  // Auto-suggest all low-corr tickers sequentially (one at a time to not hammer Datum)
+  const suggestRef = useRef(suggestETF);
+  suggestRef.current = suggestETF;
+  const attentionKey = attentionRows.map((r) => r.x_ticker).join(",");
+  useEffect(() => {
+    const pending = attentionRows.filter((r) => !suggests[r.x_ticker]);
+    if (!pending.length) return;
+    let cancelled = false;
+    (async () => {
+      for (const r of pending) {
+        if (cancelled) break;
+        await suggestRef.current(r.x_ticker);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [attentionKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const [dragging, setDragging] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState<string | null>(null);
@@ -280,13 +319,8 @@ export default function Home() {
                         <td className="px-2 py-1 text-right tabular-nums text-red-400 font-semibold">{r.corr.toFixed(2)}</td>
                         <td className="px-2 py-1 text-right tabular-nums text-slate-400">{r.beta.toFixed(2)}</td>
                         <td className="px-3 py-1">
-                          {!sug && (
-                            <button onClick={() => suggestETF(r.x_ticker)}
-                              className="text-[10px] text-blue-400 hover:text-blue-300 underline">
-                              найти →
-                            </button>
-                          )}
-                          {sug === "loading" && <span className="text-slate-600 text-[10px]">поиск...</span>}
+                          {!sug && <span className="text-slate-700 text-[10px]">ожидание...</span>}
+                          {sug === "loading" && <span className="text-slate-500 text-[10px]">поиск...</span>}
                           {sug && sug !== "loading" && (
                             <span className="flex items-center gap-1.5">
                               <span className="text-green-400 font-bold">{sug.etf}</span>
