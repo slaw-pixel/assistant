@@ -21,9 +21,8 @@ POLL_HZ     = 2
 STACKS_FILE = Path(__file__).parent.parent / "data" / "stacks.json"
 
 FIELDS = [
-    "Bid",
-    "Ask",
-    "AskLstClsΔ%",   # ask vs yesterday close — главный %
+    "BidLstClsΔ%",
+    "AskLstClsΔ%",
     "isTrash",
     "Report",
 ]

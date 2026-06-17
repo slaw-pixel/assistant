@@ -5,8 +5,7 @@ import clsx from "clsx";
 
 export interface StackRow {
   ticker: string;
-  Bid: number | null;
-  Ask: number | null;
+  "BidLstClsΔ%": number | null;
   "AskLstClsΔ%": number | null;
   isTrash: number | string | null;
   Report: number | string | null;
@@ -18,20 +17,17 @@ function pct(v: number | null): string {
   if (v == null) return "—";
   return (v > 0 ? "+" : "") + v.toFixed(2) + "%";
 }
-function price(v: number | null): string {
-  if (v == null) return "—";
-  return v.toFixed(2);
-}
 function pctColor(v: number | null): string {
   if (v == null) return "text-slate-600";
-  if (v > 2) return "text-green-400 font-semibold";
-  if (v > 0.5) return "text-green-300";
-  if (v < -2) return "text-red-400 font-semibold";
-  if (v < -0.5) return "text-red-300";
+  if (v > 3)  return "text-green-400 font-semibold";
+  if (v > 1)  return "text-green-300";
+  if (v < -3) return "text-red-400 font-semibold";
+  if (v < -1) return "text-red-300";
   return "text-slate-400";
 }
-function boolFlag(v: number | string | null): React.ReactNode {
-  if (v == null || v === "" || v === 0 || v === "NO" || v === "0") return null;
+function flag(v: number | string | null): React.ReactNode {
+  if (v == null || v === "" || v === 0 || v === "NO" || v === "0" || v === "False")
+    return null;
   return <span className="text-yellow-400">●</span>;
 }
 
@@ -77,12 +73,14 @@ export default function StacksTable() {
 
   return (
     <div className="flex flex-col h-full">
-      {/* status */}
+      {/* status bar */}
       <div className="flex items-center gap-2 px-4 py-1.5 border-b border-[#2a2a2a] text-xs text-slate-500 shrink-0">
         <span className={clsx("w-2 h-2 rounded-full shrink-0", dot)} />
         <span>
-          {status === "connected" ? "Терминал подключён"
-            : status === "connecting" ? "Подключение..."
+          {status === "connected"
+            ? "Терминал подключён"
+            : status === "connecting"
+            ? "Подключение..."
             : "Терминал недоступен — запусти: python scripts/terminal_bridge.py"}
         </span>
         {ts && <span className="ml-auto tabular-nums">{ts}</span>}
@@ -97,12 +95,11 @@ export default function StacksTable() {
           <table className="w-full text-sm border-collapse">
             <thead className="sticky top-0 bg-[#0d0d0d] z-10">
               <tr className="text-xs text-slate-500 uppercase tracking-wider">
-                <th className="text-left px-3 py-2">Ticker</th>
-                <th className="text-right px-3 py-2">Bid</th>
-                <th className="text-right px-3 py-2">Ask</th>
-                <th className="text-right px-3 py-2 text-slate-300">Ask%</th>
-                <th className="text-center px-3 py-2">Trash</th>
-                <th className="text-center px-3 py-2">Rep</th>
+                <th className="text-left px-3 py-2 w-24">Ticker</th>
+                <th className="text-right px-3 py-2">Bid%</th>
+                <th className="text-right px-3 py-2">Ask%</th>
+                <th className="text-center px-2 py-2">Trash</th>
+                <th className="text-center px-2 py-2">Rep</th>
               </tr>
             </thead>
             <tbody>
@@ -111,18 +108,17 @@ export default function StacksTable() {
                   key={r.ticker}
                   className="border-t border-[#1a1a1a] hover:bg-[#1a1a1a] transition-colors"
                 >
-                  <td className="px-3 py-2 font-bold text-slate-100">{r.ticker}</td>
-                  <td className="px-3 py-2 text-right tabular-nums text-slate-400">
-                    {price(r.Bid)}
+                  <td className="px-3 py-1.5 font-bold text-slate-100 text-xs tracking-wide">
+                    {r.ticker}
                   </td>
-                  <td className="px-3 py-2 text-right tabular-nums text-slate-300">
-                    {price(r.Ask)}
+                  <td className={clsx("px-3 py-1.5 text-right tabular-nums", pctColor(r["BidLstClsΔ%"]))}>
+                    {pct(r["BidLstClsΔ%"])}
                   </td>
-                  <td className={clsx("px-3 py-2 text-right tabular-nums font-semibold", pctColor(r["AskLstClsΔ%"]))}>
+                  <td className={clsx("px-3 py-1.5 text-right tabular-nums", pctColor(r["AskLstClsΔ%"]))}>
                     {pct(r["AskLstClsΔ%"])}
                   </td>
-                  <td className="px-3 py-2 text-center">{boolFlag(r.isTrash)}</td>
-                  <td className="px-3 py-2 text-center">{boolFlag(r.Report)}</td>
+                  <td className="px-2 py-1.5 text-center text-xs">{flag(r.isTrash)}</td>
+                  <td className="px-2 py-1.5 text-center text-xs">{flag(r.Report)}</td>
                 </tr>
               ))}
             </tbody>
