@@ -27,9 +27,14 @@ function corrColor(c: number) {
 
 type SortCol = "ticker" | "etf" | "beta" | "corr";
 
-interface Props { rows: BetaRow[]; search: string }
+interface Props {
+  rows: BetaRow[];
+  search: string;
+  focusTicker?: string | null;
+  onDelete?: (ticker: string) => void;
+}
 
-export default function BetaTable({ rows, search }: Props) {
+export default function BetaTable({ rows, search, focusTicker, onDelete }: Props) {
   const [sortCol, setSortCol] = useState<SortCol | null>(null);
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
 
@@ -54,6 +59,50 @@ export default function BetaTable({ rows, search }: Props) {
     );
   }
 
+  function TickerRow({ row }: { row: BetaRow }) {
+    const focused = focusTicker === row.x_ticker;
+    return (
+      <tr
+        className={`group border-t transition-colors ${
+          focused
+            ? "border-l-2 border-blue-500 bg-blue-900/20 border-t-blue-900/30"
+            : "border-t-[#1c1c1c] hover:bg-[#1e1e1e]"
+        }`}
+      >
+        <td className={`px-3 py-1.5 font-medium ${focused ? "text-blue-300" : "text-slate-100"}`}>
+          {row.x_ticker}
+          <span className="ml-2 text-[10px] text-slate-600 font-normal">{SECTOR[row.y_ticker] ?? row.y_ticker}</span>
+        </td>
+        <td className="px-3 py-1.5 text-slate-600 text-xs font-mono">{row.y_ticker}</td>
+        <td className={`px-3 py-1.5 text-right tabular-nums ${betaColor(row.beta)}`}>{row.beta.toFixed(2)}</td>
+        <td className={`px-3 py-1.5 text-right tabular-nums ${corrColor(row.corr)}`}>{row.corr.toFixed(2)}</td>
+        <td className="w-6 text-center pr-2">
+          {onDelete && (
+            <button
+              onClick={() => onDelete(row.x_ticker)}
+              className="opacity-0 group-hover:opacity-100 text-slate-700 hover:text-red-500 transition-all text-base leading-none"
+              title={`Удалить ${row.x_ticker}`}
+            >
+              ×
+            </button>
+          )}
+        </td>
+      </tr>
+    );
+  }
+
+  const headers = (
+    <thead className="sticky top-0 bg-[#141414] z-10">
+      <tr className="text-xs uppercase tracking-wider">
+        <Th col="ticker" label="Тикер" />
+        <Th col="etf" label="Сектор" />
+        <Th col="beta" label="Beta" align="right" />
+        <Th col="corr" label="Corr" align="right" />
+        <th className="w-6" />
+      </tr>
+    </thead>
+  );
+
   // Sorted flat view
   if (sortCol) {
     const sorted = [...filtered].sort((a, b) => {
@@ -64,30 +113,10 @@ export default function BetaTable({ rows, search }: Props) {
       else v = a.corr - b.corr;
       return sortDir === "asc" ? v : -v;
     });
-
     return (
       <table className="w-full text-sm border-collapse">
-        <thead className="sticky top-0 bg-[#141414] z-10">
-          <tr className="text-xs uppercase tracking-wider">
-            <Th col="ticker" label="Тикер" />
-            <Th col="etf" label="Сектор" />
-            <Th col="beta" label="Beta" align="right" />
-            <Th col="corr" label="Corr" align="right" />
-          </tr>
-        </thead>
-        <tbody>
-          {sorted.map((row) => (
-            <tr key={`${row.y_ticker}-${row.x_ticker}`} className="border-t border-[#222] hover:bg-[#1e1e1e] transition-colors">
-              <td className="px-3 py-1.5 font-medium text-slate-100">
-                {row.x_ticker}
-                <span className="ml-2 text-[10px] text-slate-600 font-normal">{SECTOR[row.y_ticker] ?? row.y_ticker}</span>
-              </td>
-              <td className="px-3 py-1.5 text-slate-500 text-xs font-mono">{row.y_ticker}</td>
-              <td className={`px-3 py-1.5 text-right tabular-nums ${betaColor(row.beta)}`}>{row.beta.toFixed(2)}</td>
-              <td className={`px-3 py-1.5 text-right tabular-nums ${corrColor(row.corr)}`}>{row.corr.toFixed(2)}</td>
-            </tr>
-          ))}
-        </tbody>
+        {headers}
+        <tbody>{sorted.map((row) => <TickerRow key={`${row.y_ticker}-${row.x_ticker}`} row={row} />)}</tbody>
       </table>
     );
   }
@@ -103,37 +132,20 @@ export default function BetaTable({ rows, search }: Props) {
 
   return (
     <table className="w-full text-sm border-collapse">
-      <thead className="sticky top-0 bg-[#141414] z-10">
-        <tr className="text-xs uppercase tracking-wider">
-          <Th col="ticker" label="Тикер" />
-          <Th col="etf" label="Сектор" />
-          <Th col="beta" label="Beta" align="right" />
-          <Th col="corr" label="Corr" align="right" />
-        </tr>
-      </thead>
+      {headers}
       <tbody>
         {[...byEtf.entries()].map(([etf, etfRows]) => {
           const sorted = [...etfRows].sort((a, b) => b.beta - a.beta);
           if (sorted.length === 0) return null;
           return [
             <tr key={`h-${etf}`} className="bg-[#1c1c1c] border-t border-[#2e2e2e]">
-              <td colSpan={4} className="px-3 py-1 text-xs font-bold text-slate-400 tracking-widest uppercase">
+              <td colSpan={5} className="px-3 py-1 text-xs font-bold text-slate-400 tracking-widest uppercase">
                 {etf}
                 <span className="ml-2 font-normal text-slate-600 normal-case tracking-normal">{SECTOR[etf] ?? ""}</span>
                 <span className="ml-2 font-normal text-slate-700">{sorted.length} stocks</span>
               </td>
             </tr>,
-            ...sorted.map((row) => (
-              <tr key={`${row.y_ticker}-${row.x_ticker}`} className="border-t border-[#1c1c1c] hover:bg-[#1e1e1e] transition-colors">
-                <td className="px-3 py-1.5 font-medium text-slate-100">
-                  {row.x_ticker}
-                  <span className="ml-2 text-[10px] text-slate-600 font-normal">{SECTOR[row.y_ticker] ?? row.y_ticker}</span>
-                </td>
-                <td className="px-3 py-1.5 text-slate-600 text-xs font-mono">{row.y_ticker}</td>
-                <td className={`px-3 py-1.5 text-right tabular-nums ${betaColor(row.beta)}`}>{row.beta.toFixed(2)}</td>
-                <td className={`px-3 py-1.5 text-right tabular-nums ${corrColor(row.corr)}`}>{row.corr.toFixed(2)}</td>
-              </tr>
-            )),
+            ...sorted.map((row) => <TickerRow key={`${row.y_ticker}-${row.x_ticker}`} row={row} />),
           ];
         })}
       </tbody>

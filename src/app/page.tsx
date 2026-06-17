@@ -143,6 +143,17 @@ export default function Home() {
     fetch("/api/assignments", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(next) });
   };
 
+  const deleteTicker = useCallback(async (ticker: string) => {
+    // Optimistically remove from beta rows
+    setRows((r) => r.filter((row) => row.x_ticker !== ticker));
+    if (focusTicker === ticker) setFocusTicker(null);
+    // Remove from stacks.json
+    const res = await fetch("/api/stacks");
+    const data = await res.json();
+    const next = ((data.tickers ?? []) as string[]).filter((t) => t !== ticker);
+    await fetch("/api/stacks", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ tickers: next }) });
+  }, [focusTicker]);
+
   const dismissSuggest = useCallback((ticker: string) => {
     setSuggests((p) => {
       const next = { ...p, [ticker]: "dismissed" as const };
@@ -286,7 +297,7 @@ export default function Home() {
                 Нажми «Обновить» чтобы загрузить беты из Datum
               </div>
             )}
-            {rows.length > 0 && <BetaTable rows={rows} search={search} />}
+            {rows.length > 0 && <BetaTable rows={rows} search={search} focusTicker={focusTicker} onDelete={deleteTicker} />}
           </div>
 
           {/* Drag handle — only when attention list exists */}
@@ -325,7 +336,7 @@ export default function Home() {
                     // Filter out the currently assigned ETF from suggestions
                     const items = rawItems ? rawItems.filter((s) => s.etf !== r.y_ticker) : null;
                     return (
-                      <tr key={r.x_ticker} className="border-t border-[#252525] hover:bg-[#212121]">
+                      <tr key={r.x_ticker} className={focusTicker === r.x_ticker ? "border-t border-blue-900/40 border-l-2 border-l-blue-500 bg-blue-900/20" : "border-t border-[#252525] hover:bg-[#212121]"}>
                         <td className="px-3 py-1.5">
                           <button
                             onClick={() => setFocusTicker((f) => f === r.x_ticker ? null : r.x_ticker)}
