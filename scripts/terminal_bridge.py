@@ -104,10 +104,22 @@ def load_tickers():
         print(f"[bridge] cannot read {STACKS_FILE}: {e}")
         return []
 
+def _pipe_query(tickers):
+    """Connect → write → read → close. Pipe server closes after each request."""
+    handle = _pipe_connect(DATA_PIPE)
+    try:
+        raw = _pipe_request(handle, build_request(tickers, FIELDS))
+        return parse_response(raw, tickers, FIELDS)
+    finally:
+        try:
+            handle.Close()
+        except Exception:
+            pass
+
 async def poll_loop():
     global _last_snapshot
-    handle = None
     interval = 1.0 / POLL_HZ
+    last_ticker_count = 0
 
     while True:
         tickers = load_tickers()
@@ -116,19 +128,13 @@ async def poll_loop():
             await asyncio.sleep(5)
             continue
 
-        if handle is None:
-            try:
-                handle = _pipe_connect(DATA_PIPE)
-                print(f"[bridge] pipe connected, {len(tickers)} tickers")
-            except Exception as e:
-                print(f"[bridge] pipe not available: {e}")
-                await asyncio.sleep(3)
-                continue
+        if len(tickers) != last_ticker_count:
+            print(f"[bridge] watching {len(tickers)} tickers")
+            last_ticker_count = len(tickers)
 
         try:
             t0 = time.monotonic()
-            raw = _pipe_request(handle, build_request(tickers, FIELDS))
-            rows = parse_response(raw, tickers, FIELDS)
+            rows = await asyncio.get_event_loop().run_in_executor(None, _pipe_query, tickers)
             _last_snapshot = rows
             msg = json.dumps({
                 "type": "snapshot",
@@ -139,12 +145,7 @@ async def poll_loop():
             elapsed = time.monotonic() - t0
             await asyncio.sleep(max(0, interval - elapsed))
         except Exception as e:
-            print(f"[bridge] pipe error: {e} — reconnecting")
-            try:
-                handle.Close()
-            except Exception:
-                pass
-            handle = None
+            print(f"[bridge] pipe error: {e}")
             await asyncio.sleep(1)
 
 # ── main ──────────────────────────────────────────────────────────────────────
